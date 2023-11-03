@@ -17,6 +17,7 @@ fluidPage(
                 choices = c("Columns" = "columns",
                             "Rows" = "rows")),
     textAreaInput("raw", "Paste raw data here:"),
+    plotOutput("selection_plot"),
     uiOutput("plate_plan_input"),
     tableOutput("raw_table")
 
