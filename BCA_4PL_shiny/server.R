@@ -6,8 +6,9 @@ library(shiny)
 library(stringr)
 library(shinyMatrix)
 library(ggplot2)
+library(plotly)
 
-function(input, output, session) {
+server <- function(input, output, session) {
   # Make a matrix based on duplication parameters
   blank_matrix <- reactive({
     if (input$direction == "columns") { # Make matrix for duplicates across columns
@@ -35,10 +36,9 @@ function(input, output, session) {
     }
   })
 
-
   # Create a data frame with individual coordinates
   coordinates <- reactive({
-    expand.grid(Var1 = rownames(blank_matrix()), Var2 = colnames(blank_matrix()))
+    expand.grid("rows" = 1:nrow(blank_matrix()), "cols" = 1:ncol(blank_matrix()))
   })
 
   # reactive UI for plate plan input
@@ -50,12 +50,25 @@ function(input, output, session) {
   })
 
   # Plot to select for input
-  output$selection_plot <- renderPlot({
-    ggplot(coordinates(), aes(x = as.factor(Var2), y = as.factor(Var1))) +
-      geom_point(aes(size = value), color = "blue") +
-      labs(x = "Column", y = "Row", size = "Value") +
-      theme_minimal() +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+  output$selection_plot <- renderPlotly({
+      p <- ggplot(coordinates(), aes(x = cols, y = rows)) +
+          geom_point(color = "blue", size = 5) +
+          labs(x = "Column", y = "Row") +
+          theme_bw() +
+          scale_y_reverse(
+              breaks = 1:nrow(blank_matrix()),
+              labels = function(x) rownames(blank_matrix())[x]
+          ) +
+          scale_x_continuous(
+              breaks = 1:ncol(blank_matrix()),
+              labels = function(x) colnames(blank_matrix())[x]
+          ) +
+          theme(
+              panel.grid.minor = element_line(color = "gray", size = 0.5, linetype = "solid"),
+              panel.grid.major = element_blank()
+          )
+      
+      ggplotly(p)  # Convert the ggplot object to an interactive plot
   })
 
   # Load raw absorbance data from text input
