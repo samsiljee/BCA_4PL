@@ -1,4 +1,4 @@
-# A shiyn application to runa  4PL analysis on BCA data
+# A shiny application to runa  4PL analysis on BCA data
 # Sam Siljee
 # Created 30 October 2023
 
