@@ -17,7 +17,7 @@ fluidPage(
                 choices = c("Columns" = "columns",
                             "Rows" = "rows")),
     textAreaInput("raw", "Paste raw data here:"),
-    plotlyOutput("selection_plot"),
+    plotly::plotlyOutput("selection_plot"),
     uiOutput("plate_plan_input"),
     tableOutput("raw_table")
 
