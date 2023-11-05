@@ -69,6 +69,19 @@ server <- function(input, output, session) {
           )
       
       ggplotly(p)  # Convert the ggplot object to an interactive plot
+      
+      proxy <- plotly::plotlyProxy("selection_plot") # Create a proxy object for the plot
+      
+      # Modify the behavior for click and drag to select points
+      plotly::plotlyProxyInvoke(
+        session = session,
+        id = "selection_plot",
+        ns = "",
+        "relayout",
+        list(dragmode = "select")
+      )
+      
+      p
   })
 
   # Load raw absorbance data from text input
