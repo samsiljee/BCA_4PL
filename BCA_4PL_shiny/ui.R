@@ -17,8 +17,12 @@ fluidPage(
                 choices = c("Columns" = "columns",
                             "Rows" = "rows")),
     textAreaInput("raw", "Paste raw data here:"),
-    plotly::plotlyOutput("selection_plot"),
-    uiOutput("plate_plan_input"),
+    plotOutput("plate_plan_plot"),
+    fluidRow(column(2, h5("Unknown")),
+             column(2, h5("Sample type")),
+             column(2, h5("Sample name")),
+             column(3, h5("Concentration"))),
+    uiOutput("grid_input"),
     tableOutput("raw_table")
 
 )

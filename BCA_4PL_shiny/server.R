@@ -4,12 +4,10 @@
 
 library(shiny)
 library(stringr)
-library(shinyMatrix)
 library(ggplot2)
-library(plotly)
 
 server <- function(input, output, session) {
-  # Make a matrix based on duplication parameters
+  # Make a matrix based on replication parameters
   blank_matrix <- reactive({
     if (input$direction == "columns") { # Make matrix for duplicates across columns
       blank_mat <- matrix(NA, 8, 12 / as.numeric(input$replicates))
@@ -41,47 +39,48 @@ server <- function(input, output, session) {
     expand.grid("rows" = 1:nrow(blank_matrix()), "cols" = 1:ncol(blank_matrix()))
   })
 
-  # reactive UI for plate plan input
-  output$plate_plan_input <- renderUI({
-    matrixInput("plate_plan",
-      "Plate plan:",
-      value = blank_matrix()
-    )
+  # Create grid of UI elements for input
+  output$grid_input <- renderUI({
+    inputs <- lapply(1:nrow(coordinates()), function(unknown) {
+      fluidRow(
+        column(2, h5(paste("Unknown", unknown))),
+        column(2, selectInput(
+          paste0("type_", unknown),
+          NULL,
+          choices = c(
+            "Sample", "Standard", "Blank"
+          )
+        )),
+        column(2, textInput(
+          paste0("name_", unknown),
+          NULL,
+          value = "Sample name"
+        )),
+        column(2,
+               )
+        )
+    })
+    do.call(tagList, inputs)
   })
 
-  # Plot to select for input
-  output$selection_plot <- renderPlotly({
-      p <- ggplot(coordinates(), aes(x = cols, y = rows)) +
-          geom_point(color = "blue", size = 5) +
-          labs(x = "Column", y = "Row") +
-          theme_bw() +
-          scale_y_reverse(
-              breaks = 1:nrow(blank_matrix()),
-              labels = function(x) rownames(blank_matrix())[x]
-          ) +
-          scale_x_continuous(
-              breaks = 1:ncol(blank_matrix()),
-              labels = function(x) colnames(blank_matrix())[x]
-          ) +
-          theme(
-              panel.grid.minor = element_line(color = "gray", size = 0.5, linetype = "solid"),
-              panel.grid.major = element_blank()
-          )
-      
-      ggplotly(p)  # Convert the ggplot object to an interactive plot
-      
-      proxy <- plotly::plotlyProxy("selection_plot") # Create a proxy object for the plot
-      
-      # Modify the behavior for click and drag to select points
-      plotly::plotlyProxyInvoke(
-        session = session,
-        id = "selection_plot",
-        ns = "",
-        "relayout",
-        list(dragmode = "select")
+  # Plot to display plate plan
+  output$plate_plan_plot <- renderPlot({
+    ggplot(coordinates(), aes(x = cols, y = rows)) +
+      geom_point(color = "blue", size = 5) +
+      labs(x = "Column", y = "Row") +
+      theme_bw() +
+      scale_y_reverse(
+        breaks = 1:nrow(blank_matrix()),
+        labels = function(x) rownames(blank_matrix())[x]
+      ) +
+      scale_x_continuous(
+        breaks = 1:ncol(blank_matrix()),
+        labels = function(x) colnames(blank_matrix())[x]
+      ) +
+      theme(
+        panel.grid.minor = element_line(color = "gray", size = 0.5, linetype = "solid"),
+        panel.grid.major = element_blank()
       )
-      
-      p
   })
 
   # Load raw absorbance data from text input
