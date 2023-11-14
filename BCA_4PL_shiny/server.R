@@ -7,7 +7,7 @@ library(stringr)
 library(ggplot2)
 
 server <- function(input, output, session) {
-  # Make a matrix based on replication parameters
+  # Make a matrix to display plate plan based on replication parameters
   blank_matrix <- reactive({
     if (input$direction == "columns") { # Make matrix for duplicates across columns
       blank_mat <- matrix(NA, 8, 12 / as.numeric(input$replicates))
@@ -34,35 +34,6 @@ server <- function(input, output, session) {
     }
   })
 
-  # Create a data frame with individual coordinates
-  coordinates <- reactive({
-    expand.grid("rows" = 1:nrow(blank_matrix()), "cols" = 1:ncol(blank_matrix()))
-  })
-
-  # Create grid of UI elements for input
-  output$grid_input <- renderUI({
-    inputs <- lapply(1:nrow(coordinates()), function(unknown) {
-      fluidRow(
-        column(2, h5(paste("Unknown", unknown))),
-        column(2, selectInput(
-          paste0("type_", unknown),
-          NULL,
-          choices = c(
-            "Sample", "Standard", "Blank"
-          )
-        )),
-        column(2, textInput(
-          paste0("name_", unknown),
-          NULL,
-          value = "Sample name"
-        )),
-        column(2,
-               )
-        )
-    })
-    do.call(tagList, inputs)
-  })
-
   # Plot to display plate plan
   output$plate_plan_plot <- renderPlot({
     ggplot(coordinates(), aes(x = cols, y = rows)) +
@@ -82,7 +53,48 @@ server <- function(input, output, session) {
         panel.grid.major = element_blank()
       )
   })
+  
+  # Create a data frame with individual coordinates
+  coordinates <- reactive({
+    expand.grid("rows" = 1:nrow(blank_matrix()), "cols" = 1:ncol(blank_matrix()))
+  })
 
+  # Create grid of UI elements for input
+  output$grid_input <- renderUI({
+    inputs <- lapply(1:nrow(coordinates()), function(unknown) {
+      fluidRow(
+        column(2, h5(paste("Unknown", unknown))),
+        column(2, selectInput(
+          paste0("type_", unknown),
+          NULL,
+          choices = c(
+            "Sample", "Standard", "Blank"
+          )
+        )),
+        column(2, textInput(
+          paste0("name_", unknown),
+          NULL
+        )),
+        column(2,
+               )
+        )
+    })
+    do.call(tagList, inputs)
+  })
+
+  # Initialise blank dataframe for grid input
+  annotations <- reactiveVal(data.frame())
+  
+  # Create a dataframe reading in the values of the grid input
+  annotations <- reactive({
+    data.frame(Unknown = paste("Unknown", "1"),
+               Type = paste0("input$type_", "1"),
+               Name = input$name_1)
+  })
+  
+  # Display annotations to test
+  output$annotations <- renderDataTable(annotations())
+  
   # Load raw absorbance data from text input
   absorbance <- reactive({
     # Initialise blank data.frame

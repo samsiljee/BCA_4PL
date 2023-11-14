@@ -7,13 +7,14 @@ library(shiny)
 fluidPage(
     # Application title
     titlePanel("BCA 4PL analysis"),
+    dataTableOutput("annotations"),
     selectInput("replicates", "Replicates:",
                 choices = c(
                     "None" = 1,
                     "Duplicate" = 2,
                     "Triplicate" = 3),
                 selected = 3),
-    selectInput("direction", "Duplicated across:",
+    selectInput("direction", "Replicated across:",
                 choices = c("Columns" = "columns",
                             "Rows" = "rows")),
     textAreaInput("raw", "Paste raw data here:"),
