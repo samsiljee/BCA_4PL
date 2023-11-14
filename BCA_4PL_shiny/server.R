@@ -87,9 +87,21 @@ server <- function(input, output, session) {
   
   # Create a dataframe reading in the values of the grid input
   annotations <- reactive({
-    data.frame(Unknown = paste("Unknown", "1"),
-               Type = paste0("input$type_", "1"),
-               Name = input$name_1)
+    data <- data.frame()
+    
+    # Loop through the number of rows in coordinates
+    for (unknown in 1:nrow(coordinates())) {
+      current_row <- data.frame(
+        Unknown = paste("Unknown", unknown),
+        Type = input[[paste0("type_", unknown)]],
+        Name = input[[paste0("name_", unknown)]]
+      )
+      
+      data <- rbind(data, current_row)
+    }
+    
+    # Return the dataframe
+    return(data)
   })
   
   # Display annotations to test
