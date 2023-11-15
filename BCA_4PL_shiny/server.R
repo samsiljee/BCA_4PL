@@ -8,6 +8,8 @@ library(dplyr)
 library(ggplot2)
 library(wesanderson)
 
+colour_pallet <- wes_palettes$AsteroidCity3[c(4,3,1,2)]
+
 server <- function(input, output, session) {
   # Make a matrix to display plate plan based on replication parameters
   blank_matrix <- reactive({
@@ -51,8 +53,6 @@ server <- function(input, output, session) {
       }
     )
   })
-
-  library(wesanderson)
   
   # Plot to display plate plan
   output$plate_plan_plot <- renderPlot({
@@ -73,7 +73,7 @@ server <- function(input, output, session) {
         panel.grid.minor = element_line(color = "gray", size = 0.5, linetype = "solid"),
         panel.grid.major = element_blank()
       ) +
-      scale_color_manual(values = wes_palette(n = 4, name = "AsteroidCity1"))
+      scale_color_manual(values = colour_pallet)
   })
 
   # Create grid of UI elements for input
@@ -104,18 +104,18 @@ server <- function(input, output, session) {
   # Create a dataframe reading in the values of the grid input
   annotations <- reactive({
     data <- data.frame()
-
+    
     # Loop through the number of rows in coordinates
     for (unknown in 1:nrow(coordinates())) {
       current_row <- data.frame(
         Unknown = paste("Unknown", unknown),
-        Type = input[[paste0("type_", unknown)]],
+        Type = factor(input[[paste0("type_", unknown)]], levels = c("Sample", "Standard", "Blank", "Unused")),
         Name = input[[paste0("name_", unknown)]]
       )
-
+      
       data <- rbind(data, current_row)
     }
-
+    
     # Return the dataframe
     return(data)
   })
