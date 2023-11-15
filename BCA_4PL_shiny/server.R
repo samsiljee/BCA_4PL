@@ -77,11 +77,38 @@ server <- function(input, output, session) {
       df <- metadata()
     } else { # Handle case for missing rows if experiment done in triplicate with replicates across rows
       if (input$replicates == "3" & input$direction == "rows") {
-        data.frame(1:3, 1:3)
+        # Repeat metadata for triplicates
+        df <- rbind( # Triplicate
+          metadata(),
+          metadata(),
+          metadata()) %>%
+          arrange(Index)
+        # Correct Row_name
+        df <- df %>% mutate(
+          Row_name = c(
+            rep(LETTERS[1:3], 12),
+            rep(LETTERS[4:6], 12)
+          )
+        )
+        # Add rows to make up to 96
+        df <- rbind(df,
+          data.frame(
+            Index = 0,
+            Type = "Unused",
+            Name = NA,
+            Concentration = NA,
+            cols = NA,
+            rows = NA,
+            Label = NA,
+            Row_name = rep(LETTERS[7:8], 12),
+            Col_name = rep(1:12, each = 2)
+          ))
+        
+        df
       } else {
         # Replicate data.frame for replicates
         df <- switch(input$replicates,
-          "1" = metadata(),
+                     "1" = metadata(),
           "2" = rbind(metadata(), metadata()),
           "3" = rbind(metadata(), metadata(), metadata())
         )
