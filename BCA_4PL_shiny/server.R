@@ -4,13 +4,76 @@
 
 library(shiny)
 library(stringr)
-library(dplyr)
 library(ggplot2)
+library(dplyr)
 library(wesanderson)
 
 colour_pallet <- wes_palettes$AsteroidCity3[c(4,3,1,2)]
 
 server <- function(input, output, session) {
+
+  # Annotations ----
+  
+  # Create a data frame with individual coordinates
+  coordinates <- reactive({
+    switch(input$direction,
+           "columns" = {
+             df <- expand.grid("rows" = 1:nrow(blank_matrix()), "cols" = 1:ncol(blank_matrix()))
+             df$Index <- 1:nrow(df)
+             df
+           },
+           "rows" = {
+             df <- expand.grid("cols" = 1:ncol(blank_matrix()), "rows" = 1:nrow(blank_matrix()))
+             df$Index <- 1:nrow(df)
+             df
+           }
+    )
+  })
+  
+  # Initialise blank dataframe for grid input
+  annotations <- reactiveVal(data.frame())
+  
+  # Create a dataframe reading in the values of the grid input
+  annotations <- reactive({
+    data <- data.frame()
+    
+    # Loop through the number of rows in coordinates
+    for (index in 1:nrow(coordinates())) {
+      current_row <- data.frame(
+        Index = index,
+        Type = factor(input[[paste0("type_", index)]], levels = c("Sample", "Standard", "Blank", "Unused")),
+        Name = input[[paste0("name_", index)]],
+        Concentration = input[[paste0("concentration_", index)]]
+      )
+      
+      data <- rbind(data, current_row)
+    }
+    
+    # Return the dataframe
+    return(data)
+  })
+  
+  # Combine annotations with coordinates to make metadata table
+  metadata <- reactive({
+    df <- merge(annotations(), coordinates(), by = "Index")
+    
+    # Generate labels, rows names, and col names
+    df <- df %>%
+      group_by(Type) %>%
+      mutate(Label = paste(Type, row_number())) %>%
+      ungroup() %>%
+      mutate(Row_name = rownames(blank_matrix()[rows,]),
+             Col_name = colnames(blank_matrix()[,cols]))
+    
+    df
+  })
+  
+  # Display annotations to test
+  output$test_1 <- renderPrint(print(metadata(), n = 100))
+  output$test_2 <- renderPrint(blank_matrix())
+  
+  # Plate plan plot ----
+  
   # Make a matrix to display plate plan based on replication parameters
   blank_matrix <- reactive({
     if (input$direction == "columns") { # Make matrix for duplicates across columns
@@ -30,33 +93,17 @@ server <- function(input, output, session) {
       blank_mat <- matrix(NA, 8 / as.numeric(input$replicates), 12)
       colnames(blank_mat) <- 1:12
       rownames(blank_mat) <- switch(input$replicates,
-        "1" = LETTERS[1:8],
-        "2" = c("A - B", "C - D", "E - F", "G - H"),
-        "3" = c("A - C", "D - F")
+                                    "1" = LETTERS[1:8],
+                                    "2" = c("A - B", "C - D", "E - F", "G - H"),
+                                    "3" = c("A - C", "D - F")
       )
       blank_mat
     }
   })
-
-  # Create a data frame with individual coordinates
-  coordinates <- reactive({
-    switch(input$direction,
-      "columns" = {
-        df <- expand.grid("rows" = 1:nrow(blank_matrix()), "cols" = 1:ncol(blank_matrix()))
-        df <- mutate(df, Unknown = paste("Unknown", 1:nrow(df)))
-        df
-      },
-      "rows" = {
-        df <- expand.grid("cols" = 1:ncol(blank_matrix()), "rows" = 1:nrow(blank_matrix()))
-        df <- mutate(df, Unknown = paste("Unknown", 1:nrow(df)))
-        df
-      }
-    )
-  })
   
   # Plot to display plate plan
   output$plate_plan_plot <- renderPlot({
-    ggplot(metadata(), aes(x = cols, y = rows, label = Unknown, color = Type)) +
+    ggplot(metadata(), aes(x = cols, y = rows, label = Label, color = Type)) +
       geom_point(size = 5) +
       geom_text(col = "black", vjust = 1.5, hjust = 0.5) +
       labs(x = "Column", y = "Row") +
@@ -76,58 +123,40 @@ server <- function(input, output, session) {
       scale_color_manual(values = colour_pallet)
   })
 
+  # Reactive UI ----
+  
+  test_vector <- reactive({
+    1:nrow(metadata())
+  })
+  
   # Create grid of UI elements for input
   output$grid_input <- renderUI({
-    inputs <- lapply(1:nrow(coordinates()), function(unknown) {
+    inputs <- lapply(1:nrow(coordinates()), function(index) {
       fluidRow(
-        column(2, h5(paste("Unknown", unknown))),
+        column(1, h5(index)),
         column(2, selectInput(
-          paste0("type_", unknown),
+          paste0("type_", index),
           NULL,
           choices = c(
             "Sample", "Standard", "Blank", "Unused"
           )
         )),
         column(2, textInput(
-          paste0("name_", unknown),
+          paste0("name_", index),
           NULL
         )),
-        column(2, )
+        column(2, numericInput(
+          paste0("concentration_", index),
+          NULL,
+          value = NA
+        ))
       )
     })
     do.call(tagList, inputs)
   })
 
-  # Initialise blank dataframe for grid input
-  annotations <- reactiveVal(data.frame())
-
-  # Create a dataframe reading in the values of the grid input
-  annotations <- reactive({
-    data <- data.frame()
-    
-    # Loop through the number of rows in coordinates
-    for (unknown in 1:nrow(coordinates())) {
-      current_row <- data.frame(
-        Unknown = paste("Unknown", unknown),
-        Type = factor(input[[paste0("type_", unknown)]], levels = c("Sample", "Standard", "Blank", "Unused")),
-        Name = input[[paste0("name_", unknown)]]
-      )
-      
-      data <- rbind(data, current_row)
-    }
-    
-    # Return the dataframe
-    return(data)
-  })
-
-  # Combine annotations with coordinates to make metadata table
-  metadata <- reactive({
-    merge(annotations(), coordinates(), by = "Unknown")
-  })
-
-  # Display annotations to test
-  output$test <- renderPrint(metadata())
-
+  # Input ----
+  
   # Load raw absorbance data from text input
   absorbance <- reactive({
     # Initialise blank data.frame
