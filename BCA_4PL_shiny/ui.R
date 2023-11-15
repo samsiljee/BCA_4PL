@@ -7,15 +7,17 @@ library(shiny)
 fluidPage(
     # Application title
     titlePanel("BCA 4PL analysis"),
-    selectInput("replicates", "Replicates:",
-                choices = c(
-                    "None" = 1,
-                    "Duplicate" = 2,
-                    "Triplicate" = 3),
-                selected = 3),
-    selectInput("direction", "Replicated across:",
-                choices = c("Columns" = "columns",
-                            "Rows" = "rows")),
+    fluidRow(
+        column(3, selectInput("replicates", "Replicates:",
+                              choices = c(
+                                  "None" = 1,
+                                  "Duplicate" = 2,
+                                  "Triplicate" = 3),
+                              selected = 3)),
+        column(3, selectInput("direction", "Replicated across:",
+                              choices = c("Columns" = "columns",
+                                          "Rows" = "rows")))
+    ),
     textAreaInput("raw", "Paste raw data here:"),
     plotOutput("plate_plan_plot"),
     fluidRow(column(1, h5("Index")),

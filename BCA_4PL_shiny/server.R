@@ -10,8 +10,8 @@ colour_pallet <- wes_palettes$AsteroidCity3[c(4, 3, 1, 2)]
 
 server <- function(input, output, session) {
   # Display annotations to test
-  output$test_1 <- renderPrint(print(metadata_long(), n = 100))
-  output$test_2 <- renderPrint(print(absorbance_long(), n = 100))
+  output$test_1 <- renderPrint(print(str(metadata_long())))
+  output$test_2 <- renderPrint(print(data(), n = 100))
 
   # Annotations ----
 
@@ -251,6 +251,7 @@ server <- function(input, output, session) {
         str_split(pattern = "\t") %>%
         unlist()
       dat <- rbind(dat, current_row)
+      dat
     }
 
     # Add row names
@@ -281,4 +282,17 @@ server <- function(input, output, session) {
   output$raw_table <- renderTable(absorbance(),
     rownames = TRUE
   )
-}
+  
+  # Data ----
+  # Combine absorbance with metadata
+  data <- reactive({
+    metadata_long() %>%
+      mutate(Column = as.character(Col_name), Row = Row_name) %>%
+      left_join(absorbance_long(),
+                by = c("Row", "Column")) %>%
+      select(Type, Absorbance, Label, Name, Concentration, Label) %>%
+      mutate(Absorbance = as.numeric(Absorbance), Concentration = as.numeric(Concentration)) %>%
+      filter(Type != "Unused")
+  })
+  
+} # Close server function
