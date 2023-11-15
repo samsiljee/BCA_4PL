@@ -6,6 +6,7 @@ library(shiny)
 library(stringr)
 library(dplyr)
 library(ggplot2)
+library(wesanderson)
 
 server <- function(input, output, session) {
   # Make a matrix to display plate plan based on replication parameters
@@ -51,11 +52,13 @@ server <- function(input, output, session) {
     )
   })
 
+  library(wesanderson)
+  
   # Plot to display plate plan
   output$plate_plan_plot <- renderPlot({
-    ggplot(metadata(), aes(x = cols, y = rows, label = Unknown, col = Type)) +
+    ggplot(metadata(), aes(x = cols, y = rows, label = Unknown, color = Type)) +
       geom_point(size = 5) +
-      geom_text(col = "black", vjust = 1.5, hjust = 0.5) + # Add labels
+      geom_text(col = "black", vjust = 1.5, hjust = 0.5) +
       labs(x = "Column", y = "Row") +
       theme_bw() +
       scale_y_reverse(
@@ -66,17 +69,11 @@ server <- function(input, output, session) {
         breaks = 1:ncol(blank_matrix()),
         labels = function(x) colnames(blank_matrix())[x]
       ) +
-      +
-        scale_color_manual(values = c(
-          "Sample" = "blue",
-          "Standard" = "red",
-          "Blank" = "yellow",
-          "Unused" = "white"
-          )) +
       theme(
         panel.grid.minor = element_line(color = "gray", size = 0.5, linetype = "solid"),
         panel.grid.major = element_blank()
-      )
+      ) +
+      scale_color_manual(values = wes_palette(n = 4, name = "AsteroidCity1"))
   })
 
   # Create grid of UI elements for input
@@ -125,7 +122,7 @@ server <- function(input, output, session) {
 
   # Combine annotations with coordinates to make metadata table
   metadata <- reactive({
-    merge(annotations(), coordinates())
+    merge(annotations(), coordinates(), by = "Unknown")
   })
 
   # Display annotations to test
