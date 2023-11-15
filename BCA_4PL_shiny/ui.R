@@ -7,7 +7,6 @@ library(shiny)
 fluidPage(
     # Application title
     titlePanel("BCA 4PL analysis"),
-    dataTableOutput("annotations"),
     selectInput("replicates", "Replicates:",
                 choices = c(
                     "None" = 1,
@@ -24,6 +23,7 @@ fluidPage(
              column(2, h5("Sample name")),
              column(3, h5("Concentration"))),
     uiOutput("grid_input"),
+    verbatimTextOutput("test"),
     tableOutput("raw_table")
 
 )

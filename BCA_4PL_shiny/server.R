@@ -4,6 +4,7 @@
 
 library(shiny)
 library(stringr)
+library(dplyr)
 library(ggplot2)
 
 server <- function(input, output, session) {
@@ -34,10 +35,27 @@ server <- function(input, output, session) {
     }
   })
 
+  # Create a data frame with individual coordinates
+  coordinates <- reactive({
+    switch(input$direction,
+      "columns" = {
+        df <- expand.grid("rows" = 1:nrow(blank_matrix()), "cols" = 1:ncol(blank_matrix()))
+        df <- mutate(df, Unknown = paste("Unknown", 1:nrow(df)))
+        df
+      },
+      "rows" = {
+        df <- expand.grid("cols" = 1:ncol(blank_matrix()), "rows" = 1:nrow(blank_matrix()))
+        df <- mutate(df, Unknown = paste("Unknown", 1:nrow(df)))
+        df
+      }
+    )
+  })
+
   # Plot to display plate plan
   output$plate_plan_plot <- renderPlot({
-    ggplot(coordinates(), aes(x = cols, y = rows)) +
-      geom_point(color = "blue", size = 5) +
+    ggplot(metadata(), aes(x = cols, y = rows, label = Unknown, col = Type)) +
+      geom_point(size = 5) +
+      geom_text(col = "black", vjust = 1.5, hjust = 0.5) + # Add labels
       labs(x = "Column", y = "Row") +
       theme_bw() +
       scale_y_reverse(
@@ -48,15 +66,17 @@ server <- function(input, output, session) {
         breaks = 1:ncol(blank_matrix()),
         labels = function(x) colnames(blank_matrix())[x]
       ) +
+      +
+        scale_color_manual(values = c(
+          "Sample" = "blue",
+          "Standard" = "red",
+          "Blank" = "yellow",
+          "Unused" = "white"
+          )) +
       theme(
         panel.grid.minor = element_line(color = "gray", size = 0.5, linetype = "solid"),
         panel.grid.major = element_blank()
       )
-  })
-  
-  # Create a data frame with individual coordinates
-  coordinates <- reactive({
-    expand.grid("rows" = 1:nrow(blank_matrix()), "cols" = 1:ncol(blank_matrix()))
   })
 
   # Create grid of UI elements for input
@@ -68,27 +88,26 @@ server <- function(input, output, session) {
           paste0("type_", unknown),
           NULL,
           choices = c(
-            "Sample", "Standard", "Blank"
+            "Sample", "Standard", "Blank", "Unused"
           )
         )),
         column(2, textInput(
           paste0("name_", unknown),
           NULL
         )),
-        column(2,
-               )
-        )
+        column(2, )
+      )
     })
     do.call(tagList, inputs)
   })
 
   # Initialise blank dataframe for grid input
   annotations <- reactiveVal(data.frame())
-  
+
   # Create a dataframe reading in the values of the grid input
   annotations <- reactive({
     data <- data.frame()
-    
+
     # Loop through the number of rows in coordinates
     for (unknown in 1:nrow(coordinates())) {
       current_row <- data.frame(
@@ -96,17 +115,22 @@ server <- function(input, output, session) {
         Type = input[[paste0("type_", unknown)]],
         Name = input[[paste0("name_", unknown)]]
       )
-      
+
       data <- rbind(data, current_row)
     }
-    
+
     # Return the dataframe
     return(data)
   })
-  
+
+  # Combine annotations with coordinates to make metadata table
+  metadata <- reactive({
+    merge(annotations(), coordinates())
+  })
+
   # Display annotations to test
-  output$annotations <- renderDataTable(annotations())
-  
+  output$test <- renderPrint(metadata())
+
   # Load raw absorbance data from text input
   absorbance <- reactive({
     # Initialise blank data.frame
