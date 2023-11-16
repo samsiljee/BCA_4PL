@@ -11,8 +11,8 @@ colour_pallet <- wes_palettes$AsteroidCity3[c(4, 3, 1, 2)]
 
 server <- function(input, output, session) {
   # Display annotations to test
-  output$test_1 <- renderPrint(print("Hello"))
-  output$test_2 <- renderPrint(print(data_long(), n = 100))
+  output$test_1 <- renderPrint(data_long())
+  output$test_2 <- renderPrint(metadata())
 
   # Annotations ----
 
@@ -304,6 +304,11 @@ server <- function(input, output, session) {
   
   # Processing ----
   # Create model
-  model <- 
+  model <- reactive({
+    drm(Concentration ~ Absorbance,
+        data = data_long() %>%
+          filter(Type == "Standard"),
+        fct = LL.4())
+  })
   
 } # Close server function
