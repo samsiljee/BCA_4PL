@@ -11,8 +11,8 @@ colour_pallet <- wes_palettes$AsteroidCity3[c(4, 3, 1, 2)]
 
 server <- function(input, output, session) {
   # Display annotations to test
-  output$test_1 <- renderPrint(data_long())
-  output$test_2 <- renderPrint(metadata())
+  output$test_1 <- renderPrint(summary(model()))
+  output$test_2 <- renderPrint(data_long())
 
   # Annotations ----
 
