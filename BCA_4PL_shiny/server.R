@@ -11,8 +11,10 @@ colour_pallet <- wes_palettes$AsteroidCity3[c(4, 3, 1, 2)]
 
 server <- function(input, output, session) {
   # Display annotations to test
-  output$test_1 <- renderPrint(summary(model()))
-  output$test_2 <- renderPrint(data_long())
+  output$test_1 <- renderPrint(data_long() %>%
+                                 filter(Type == "Sample") %>%
+                                 .$Absorbance)
+  output$test_2 <- renderPrint(predictions())
 
   # Annotations ----
 
@@ -235,7 +237,7 @@ server <- function(input, output, session) {
         column(2, numericInput(
           paste0("dilution_", index),
           NULL,
-          value = NA
+          value = 1
         ))
       )
     })
@@ -309,6 +311,14 @@ server <- function(input, output, session) {
         data = data_long() %>%
           filter(Type == "Standard"),
         fct = LL.4())
+  })
+  
+  # Run predictions
+  predictions <- reactive({
+    predict(model(),
+                newdata = data_long() %>%
+                  filter(Type == "Sample"),
+                interval = "confidence")
   })
   
 } # Close server function
