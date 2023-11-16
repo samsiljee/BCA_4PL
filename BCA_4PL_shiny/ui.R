@@ -21,12 +21,12 @@ fluidPage(
     textAreaInput("raw", "Paste raw data here:"),
     plotOutput("plate_plan_plot", height = "500px"),
     fluidRow(column(1, h5("Index")),
-             column(2, h5("Sample type")),
-             column(2, h5("Sample name")),
-             column(3, h5("Concentration"))),
+             column(2, h5("Type")),
+             column(3, h5("Sample name")),
+             column(2, h5("Concentration")),
+             column(2, h5("Dilution factor"))),
     uiOutput("grid_input"),
     verbatimTextOutput("test_1"),
-    verbatimTextOutput("test_2"),
-    tableOutput("raw_table")
+    verbatimTextOutput("test_2")
 
 )

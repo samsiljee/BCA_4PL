@@ -25,3 +25,28 @@ plot(fit, log = "x", col = "red", xlab = "Concentration", ylab = "Absorbance")
 
 # Add original data points to the plot
 points(dat$concentration, dat$absorbance, pch = 16, col = "black")
+
+
+# Second suggestion
+
+# Install and load the drc package
+# install.packages("drc")
+library(drc)
+
+# Assume you have a data frame 'standards_data' with columns 'Absorbance' and 'Concentration'
+# Fit a 4PL model
+model_4pl <- drm(Concentration ~ Absorbance, data = standards_data, fct = LL.4())
+
+# Extract parameter estimates
+parameters <- as.numeric(coefficients(model_4pl))
+
+# Print parameter estimates
+print(parameters)
+
+# Predict concentrations from new absorbance readings
+new_absorbance <- c(0.1, 0.5, 1.0)  # Replace with your actual absorbance readings
+predicted_concentrations <- predict(model_4pl, data.frame(Absorbance = new_absorbance))
+
+# Print predicted concentrations
+print(predicted_concentrations)
+

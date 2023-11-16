@@ -5,13 +5,14 @@
 library(shiny)
 library(tidyverse)
 library(wesanderson)
+library(drc)
 
 colour_pallet <- wes_palettes$AsteroidCity3[c(4, 3, 1, 2)]
 
 server <- function(input, output, session) {
   # Display annotations to test
-  output$test_1 <- renderPrint(print(str(metadata_long())))
-  output$test_2 <- renderPrint(print(data(), n = 100))
+  output$test_1 <- renderPrint(print("Hello"))
+  output$test_2 <- renderPrint(print(data_long(), n = 100))
 
   # Annotations ----
 
@@ -44,7 +45,8 @@ server <- function(input, output, session) {
         Index = index,
         Type = factor(input[[paste0("type_", index)]], levels = c("Sample", "Standard", "Blank", "Unused")),
         Name = input[[paste0("name_", index)]],
-        Concentration = input[[paste0("concentration_", index)]]
+        Concentration = input[[paste0("concentration_", index)]],
+        Dilution = input[[paste0("dilution_", index)]]
       )
 
       data <- rbind(data, current_row)
@@ -221,12 +223,17 @@ server <- function(input, output, session) {
             "Sample", "Standard", "Blank", "Unused"
           )
         )),
-        column(2, textInput(
+        column(3, textInput(
           paste0("name_", index),
           NULL
         )),
         column(2, numericInput(
           paste0("concentration_", index),
+          NULL,
+          value = NA
+        )),
+        column(2, numericInput(
+          paste0("dilution_", index),
           NULL,
           value = NA
         ))
@@ -235,7 +242,7 @@ server <- function(input, output, session) {
     do.call(tagList, inputs)
   })
 
-  # Input ----
+  # Read Input ----
 
   # Load raw absorbance data from text input
   absorbance <- reactive({
@@ -280,22 +287,23 @@ server <- function(input, output, session) {
   absorbance_long <- reactive({
     reshape_absorbance(absorbance(), input$direction, input$replicates)
   })
-
-  # Render raw absorbance data table
-  output$raw_table <- renderTable(absorbance(),
-    rownames = TRUE
-  )
   
   # Data ----
   # Combine absorbance with metadata
-  data <- reactive({
+  data_long <- reactive({
     metadata_long() %>%
       mutate(Column = as.character(Col_name), Row = Row_name) %>%
       left_join(absorbance_long(),
                 by = c("Row", "Column")) %>%
-      select(Type, Absorbance, Label, Name, Concentration, Label) %>%
-      mutate(Absorbance = as.numeric(Absorbance), Concentration = as.numeric(Concentration)) %>%
+      select(Type, Absorbance, Label, Name, Concentration, Dilution) %>%
+      mutate(Absorbance = as.numeric(Absorbance),
+             Concentration = as.numeric(Concentration),
+             Dilution = as.numeric(Dilution)) %>%
       filter(Type != "Unused")
   })
+  
+  # Processing ----
+  # Create model
+  model <- 
   
 } # Close server function
