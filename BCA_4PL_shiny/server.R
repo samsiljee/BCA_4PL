@@ -180,18 +180,21 @@ server <- function(input, output, session) {
 
   # Plot to display plate plan
   output$plate_plan_plot <- renderPlot({
-    ggplot(metadata(), aes(x = cols, y = rows, label = Label, color = Type)) +
-      geom_point(size = 5) +
-      geom_text(col = "black", vjust = 1.5, hjust = 0.5) +
+    ggplot(metadata(), aes(x = cols, y = rows, color = Type)) +
+      geom_point(size = 10) +
+      geom_text(aes(label = Label), col = "black", vjust = 2.5, hjust = 0.5) +
+      geom_text(aes(label = Index), col = "white", hjust = 0.5) +
       labs(x = "Column", y = "Row") +
       theme_bw() +
       scale_y_reverse(
         breaks = 1:nrow(blank_matrix()),
-        labels = function(x) rownames(blank_matrix())[x]
+        labels = function(x) rownames(blank_matrix())[x],
+        expand = expansion(add = c(0.5, 0.5))
       ) +
       scale_x_continuous(
         breaks = 1:ncol(blank_matrix()),
-        labels = function(x) colnames(blank_matrix())[x]
+        labels = function(x) colnames(blank_matrix())[x],
+        expand = expansion(add = c(0.5, 0.5))
       ) +
       theme(
         panel.grid.minor = element_line(color = "gray", size = 0.5, linetype = "solid"),
