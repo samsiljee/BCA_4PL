@@ -295,7 +295,7 @@ server <- function(input, output, session) {
       mutate(Column = as.character(Col_name), Row = Row_name) %>%
       left_join(absorbance_long(),
                 by = c("Row", "Column")) %>%
-      select(Type, Absorbance, Label, Name, Concentration, Dilution) %>%
+      dplyr::select(Type, Absorbance, Label, Name, Concentration, Dilution) %>%
       mutate(Absorbance = as.numeric(Absorbance),
              Concentration = as.numeric(Concentration),
              Dilution = as.numeric(Dilution)) %>%
