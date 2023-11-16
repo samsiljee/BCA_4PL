@@ -11,10 +11,8 @@ colour_pallet <- wes_palettes$AsteroidCity3[c(4, 3, 1, 2)]
 
 server <- function(input, output, session) {
   # Display annotations to test
-  output$test_1 <- renderPrint(data_long() %>%
-                                 filter(Type == "Sample") %>%
-                                 .$Absorbance)
-  output$test_2 <- renderPrint(predictions())
+  output$test_1 <- renderPrint(predictions_2())
+  output$test_2 <- renderPrint(model())
 
   # Annotations ----
 
@@ -309,7 +307,8 @@ server <- function(input, output, session) {
   model <- reactive({
     drm(Concentration ~ Absorbance,
         data = data_long() %>%
-          filter(Type == "Standard"),
+          filter(Type == "Standard") %>%
+          dplyr::select(Concentration, Absorbance),
         fct = LL.4())
   })
   
@@ -317,7 +316,8 @@ server <- function(input, output, session) {
   predictions <- reactive({
     predict(model(),
                 newdata = data_long() %>%
-                  filter(Type == "Sample"),
+                  filter(Type == "Sample") %>%
+              dplyr::select(Concentration, Absorbance),
                 interval = "confidence")
   })
   
