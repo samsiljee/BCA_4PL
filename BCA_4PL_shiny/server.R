@@ -7,11 +7,11 @@ library(tidyverse)
 library(wesanderson)
 library(drc)
 
-colour_pallet <- wes_palettes$AsteroidCity3[c(4, 3, 1, 2)]
+colour_pallet <- wes_palettes$AsteroidCity3[c(2, 4, 3, 1)]
 
 server <- function(input, output, session) {
   # Display annotations to test
-  output$test_1 <- renderPrint(predictions_2())
+  output$test_1 <- renderPrint(predictions())
   output$test_2 <- renderPrint(model())
 
   # Annotations ----
@@ -43,7 +43,7 @@ server <- function(input, output, session) {
     for (index in 1:nrow(coordinates())) {
       current_row <- data.frame(
         Index = index,
-        Type = factor(input[[paste0("type_", index)]], levels = c("Sample", "Standard", "Blank", "Unused")),
+        Type = factor(input[[paste0("type_", index)]], levels = c("Unused", "Standard", "Blank", "Sample")),
         Name = input[[paste0("name_", index)]],
         Concentration = input[[paste0("concentration_", index)]],
         Dilution = input[[paste0("dilution_", index)]]
@@ -207,10 +207,6 @@ server <- function(input, output, session) {
 
   # Reactive UI ----
 
-  test_vector <- reactive({
-    1:nrow(metadata())
-  })
-
   # Create grid of UI elements for input
   output$grid_input <- renderUI({
     inputs <- lapply(1:nrow(coordinates()), function(index) {
@@ -219,9 +215,7 @@ server <- function(input, output, session) {
         column(2, selectInput(
           paste0("type_", index),
           NULL,
-          choices = c(
-            "Sample", "Standard", "Blank", "Unused"
-          )
+          choices = c("Unused", "Standard", "Blank", "Sample")
         )),
         column(3, textInput(
           paste0("name_", index),
@@ -274,27 +268,29 @@ server <- function(input, output, session) {
     return(dat)
   })
 
-  # Function to reshape absorbance data
-  reshape_absorbance <- function(dat, direction, replicates) {
-    dat_long <- dat %>%
-      as_tibble(rownames = "Row") %>%
-      pivot_longer(cols = -Row, names_to = "Column", values_to = "Absorbance")
-
-    return(dat_long)
-  }
-
   # Reactive to reshape absorbance data
   absorbance_long <- reactive({
-    reshape_absorbance(absorbance(), input$direction, input$replicates)
+    dat <- data.frame()
+    for(col_i in 1:12){
+      dat <- rbind(
+        dat,
+        data.frame(
+          "Absorbance" = absorbance()[,col_i],
+          "Col_name_abs" = col_i,
+          "Row_name_abs" = LETTERS[1:8]
+        )
+      )
+    }
+    return(dat)
   })
   
   # Data ----
   # Combine absorbance with metadata
   data_long <- reactive({
-    metadata_long() %>%
-      mutate(Column = as.character(Col_name), Row = Row_name) %>%
-      left_join(absorbance_long(),
-                by = c("Row", "Column")) %>%
+    merge(
+      mutate(metadata_long(), ref = paste(Row_name, Col_name, sep = "_")),
+      mutate(absorbance_long(), ref = paste(Row_name_abs, Col_name_abs, sep = "_")),
+      by = "ref") %>%
       dplyr::select(Type, Absorbance, Label, Name, Concentration, Dilution) %>%
       mutate(Absorbance = as.numeric(Absorbance),
              Concentration = as.numeric(Concentration),
