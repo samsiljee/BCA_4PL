@@ -12,7 +12,7 @@ colour_pallet <- wes_palettes$AsteroidCity3[c(2, 4, 3, 1)]
 server <- function(input, output, session) {
   # Display annotations to test
   output$test_1 <- renderPrint(predictions())
-  output$test_2 <- renderPrint(model())
+  output$test_2 <- renderPrint(results())
 
   # Annotations ----
 
@@ -317,4 +317,18 @@ server <- function(input, output, session) {
                 interval = "confidence")
   })
   
+  # Combine with metadata to make a results table
+  results <- reactive({
+    cbind(
+      filter(
+        metadata_long(),
+        Type == "Sample"
+      ),
+      predictions()
+    ) %>%
+      group_by(Index) %>%
+      summarise(Sample = Name, Concentration = mean(Prediction) * Dilution) %>%
+      group_by(Sample) %>%
+      summarise(Concentration = mean(Concentration), CV = sd(Concentration) / mean(Concentration))
+  })
 } # Close server function
