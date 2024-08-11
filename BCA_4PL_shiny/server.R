@@ -11,8 +11,8 @@ colour_pallet <- wes_palettes$AsteroidCity3[c(2, 4, 3, 1)]
 
 server <- function(input, output, session) {
   # Display annotations to test
-  output$test_1 <- renderPrint(predictions())
-  output$test_2 <- renderPrint(results())
+  output$test_1 <- renderPrint(water_blank_abs())
+  output$test_2 <- renderPrint(absorbance())
 
   # Annotations ----
 
@@ -69,7 +69,6 @@ server <- function(input, output, session) {
         Row_name = rownames(blank_matrix()[rows, ]),
         Col_name = colnames(blank_matrix()[, cols])
       )
-
     df
   })
 
@@ -207,7 +206,7 @@ server <- function(input, output, session) {
 
   # Reactive UI ----
 
-  # Create grid of UI elements for input
+  ## Create grid of UI elements for input ----
   output$grid_input <- renderUI({
     inputs <- lapply(1:nrow(coordinates()), function(index) {
       fluidRow(
@@ -236,9 +235,35 @@ server <- function(input, output, session) {
     do.call(tagList, inputs)
   })
 
+  ## Select input for water blank ----
+  blank_options <- reactive({
+    metadata() %>%
+      filter(Type == "Blank") %>%
+      .$Label %>%
+      unique()
+  })
+  
+  # Water blank UI
+  output$water_blank <- renderUI({
+    selectInput(
+      "water_blank",
+      "Water blank to subtract from all wells",
+      choices = c("", blank_options())
+    )
+  })
+  
+  # Buffer blank UI
+  output$buffer_blank <- renderUI({
+    selectInput(
+      "buffer_blank",
+      "Buffer blank to subtract from all samples",
+      choices = c("", blank_options())
+    )
+  })
+  
   # Read Input ----
 
-  # Load raw absorbance data from text input
+  ## Load raw absorbance data from text input ----
   absorbance <- reactive({
     # Initialise blank data.frame
     dat <- data.frame()
@@ -268,6 +293,15 @@ server <- function(input, output, session) {
     return(dat)
   })
 
+  # Average absorbance of water blank
+  water_blank_abs <- reactive({
+    if(input$water_blank != "") {
+      metadata_long() %>% filter(Label == input$water_blank)
+    } else {
+      0 # If no water blank selected, return 0
+    }
+  })
+  
   # Reactive to reshape absorbance data
   absorbance_long <- reactive({
     dat <- data.frame()
@@ -275,7 +309,7 @@ server <- function(input, output, session) {
       dat <- rbind(
         dat,
         data.frame(
-          "Absorbance" = absorbance()[,col_i],
+          "Absorbance" = absorbance()[,col_i] - water_blank_abs(),
           "Col_name_abs" = col_i,
           "Row_name_abs" = LETTERS[1:8]
         )
@@ -297,6 +331,12 @@ server <- function(input, output, session) {
              Dilution = as.numeric(Dilution)) %>%
       filter(Type != "Unused")
   })
+  
+  # Subtract water blank from all readings
+  
+  
+  # Subtract buffer blank from samples
+  
   
   # Processing ----
   # Create model
