@@ -11,8 +11,8 @@ colour_pallet <- wes_palettes$AsteroidCity3[c(2, 4, 3, 1)]
 
 server <- function(input, output, session) {
   # Display annotations to test
-  output$test_1 <- renderPrint(predictions())
-  output$test_2 <- renderPrint(results())
+  output$test_1 <- renderPrint(results())
+  output$test_2 <- renderPrint(predictions())
 
   # Annotations ----
 
@@ -413,7 +413,9 @@ server <- function(input, output, session) {
       predictions()
     ) %>%
       group_by(Index) %>%
-      summarise(Sample = Name, Concentration = mean(Prediction) * Dilution) %>%
+      summarise(
+        Sample = Name,
+        Concentration = mean(ifelse(input$model_to_use == "LM", fit, Prediction)) * Dilution) %>%
       group_by(Sample) %>%
       summarise(Concentration = mean(Concentration), CV = sd(Concentration) / mean(Concentration))
   })
