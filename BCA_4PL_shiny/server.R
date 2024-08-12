@@ -4,15 +4,15 @@
 
 library(shiny)
 library(tidyverse)
-library(wesanderson)
-library(drc)
+library(wesanderson) # Colours in the plate plan
+library(drc) # For log-logistic regressions
 
 colour_pallet <- wes_palettes$AsteroidCity3[c(2, 4, 3, 1)]
 
 server <- function(input, output, session) {
   # Display annotations to test
-  output$test_1 <- renderPrint(water_blank_abs())
-  output$test_2 <- renderPrint(data_long())
+  output$test_1 <- renderPrint(predictions())
+  output$test_2 <- renderPrint(results())
 
   # Annotations ----
 
@@ -82,7 +82,8 @@ server <- function(input, output, session) {
         df <- rbind( # Triplicate
           metadata(),
           metadata(),
-          metadata()) %>%
+          metadata()
+        ) %>%
           arrange(Index)
         # Correct Row_name
         df <- df %>% mutate(
@@ -92,7 +93,8 @@ server <- function(input, output, session) {
           )
         )
         # Add rows to make up to 96
-        df <- rbind(df,
+        df <- rbind(
+          df,
           data.frame(
             Index = 0,
             Type = "Unused",
@@ -103,13 +105,14 @@ server <- function(input, output, session) {
             Label = NA,
             Row_name = rep(LETTERS[7:8], 12),
             Col_name = rep(1:12, each = 2)
-          ))
-        
+          )
+        )
+
         df
       } else {
         # Replicate data.frame for replicates
         df <- switch(input$replicates,
-                     "1" = metadata(),
+          "1" = metadata(),
           "2" = rbind(metadata(), metadata()),
           "3" = rbind(metadata(), metadata(), metadata())
         )
@@ -118,22 +121,22 @@ server <- function(input, output, session) {
         # Add columns and rows as needed
         if (input$direction == "columns") {
           df <- df %>%
-            mutate(Col_name = switch(
-              input$replicates,
+            mutate(Col_name = switch(input$replicates,
               "2" = c(
                 rep(1:2, 8),
                 rep(3:4, 8),
                 rep(5:6, 8),
                 rep(7:8, 8),
                 rep(9:10, 8),
-                rep(11:12, 8)),
+                rep(11:12, 8)
+              ),
               "3" = c(
                 rep(1:3, 8),
                 rep(4:6, 8),
                 rep(7:9, 8),
-                rep(10:12, 8))
-            )
-            )
+                rep(10:12, 8)
+              )
+            ))
         } else {
           df <- df %>%
             mutate(Row_name = c(
@@ -141,15 +144,14 @@ server <- function(input, output, session) {
               rep(LETTERS[3:4], 12),
               rep(LETTERS[5:6], 12),
               rep(LETTERS[7:8], 12)
-            )
-            )
+            ))
         }
-        
+
         df
       }
     }
   })
-  
+
   # Plate plan plot ----
 
   # Make a matrix to display plate plan based on replication parameters
@@ -242,7 +244,7 @@ server <- function(input, output, session) {
       .$Label %>%
       unique()
   })
-  
+
   # Water blank UI
   output$water_blank <- renderUI({
     selectInput(
@@ -251,7 +253,7 @@ server <- function(input, output, session) {
       choices = c("", blank_options())
     )
   })
-  
+
   # Buffer blank UI
   output$buffer_blank <- renderUI({
     selectInput(
@@ -260,7 +262,7 @@ server <- function(input, output, session) {
       choices = c("", blank_options())
     )
   })
-  
+
   # Read Input ----
 
   ## Load raw absorbance data from text input ----
@@ -295,34 +297,42 @@ server <- function(input, output, session) {
 
   # Average absorbance of water blank
   water_blank_abs <- reactive({
-    if(input$water_blank != "") {
-      row_names_water_blank <- filter(metadata_long(), Label == input$water_blank) %>% .$Row_name %>% unique
-      col_names_water_blank <- filter(metadata_long(), Label == input$water_blank) %>% .$Col_name %>% unique
+    if (input$water_blank != "") {
+      row_names_water_blank <- filter(metadata_long(), Label == input$water_blank) %>%
+        .$Row_name %>%
+        unique()
+      col_names_water_blank <- filter(metadata_long(), Label == input$water_blank) %>%
+        .$Col_name %>%
+        unique()
       mean(as.numeric(absorbance()[row_names_water_blank, col_names_water_blank]))
     } else {
       0 # If no water blank selected, return 0
     }
   })
-  
+
   # Average absorbance of buffer blank
   buffer_blank_abs <- reactive({
-    if(input$buffer_blank != "") {
-      row_names_buffer_blank <- filter(metadata_long(), Label == input$buffer_blank) %>% .$Row_name %>% unique
-      col_names_buffer_blank <- filter(metadata_long(), Label == input$buffer_blank) %>% .$Col_name %>% unique
+    if (input$buffer_blank != "") {
+      row_names_buffer_blank <- filter(metadata_long(), Label == input$buffer_blank) %>%
+        .$Row_name %>%
+        unique()
+      col_names_buffer_blank <- filter(metadata_long(), Label == input$buffer_blank) %>%
+        .$Col_name %>%
+        unique()
       mean(as.numeric(absorbance()[row_names_buffer_blank, col_names_buffer_blank])) - water_blank_abs()
     } else {
       0 # If no buffer blank selected, return 0
     }
   })
-  
+
   # Reshape absorbance data to long format and subtract water blank from absorbance values
   absorbance_long <- reactive({
     dat <- data.frame()
-    for(col_i in 1:12){
+    for (col_i in 1:12) {
       dat <- rbind(
         dat,
         data.frame(
-          "Absorbance" = as.numeric(absorbance()[,col_i]) - water_blank_abs(),
+          "Absorbance" = as.numeric(absorbance()[, col_i]) - water_blank_abs(),
           "Col_name_abs" = col_i,
           "Row_name_abs" = LETTERS[1:8]
         )
@@ -330,56 +340,76 @@ server <- function(input, output, session) {
     }
     return(dat)
   })
-  
+
   # Data ----
   # Combine absorbance with metadata
   data_long <- reactive({
     dat <- merge(
       mutate(metadata_long(), ref = paste(Row_name, Col_name, sep = "_")), # Create consistant column to merge with
       mutate(absorbance_long(), ref = paste(Row_name_abs, Col_name_abs, sep = "_")), # Create consistant column to merge with
-      by = "ref") %>%
+      by = "ref"
+    ) %>%
       dplyr::select(Type, Absorbance, Label, Name, Concentration, Dilution) %>% # Remove unneeded columns
-      mutate(Absorbance = as.numeric(Absorbance),
-             Concentration = as.numeric(Concentration),
-             Dilution = as.numeric(Dilution)) %>%
+      mutate(
+        Absorbance = as.numeric(Absorbance),
+        Concentration = as.numeric(Concentration),
+        Dilution = as.numeric(Dilution)
+      ) %>%
       filter(Type %in% c("Standard", "Sample")) # Remove unused and blank cells
-    
+
     # Remove buffer blank from samples only
     dat <- rbind(
       filter(dat, Type != "Sample"), # Leave other values unchanged
       filter(dat, Type == "Sample") %>%
         mutate(Absorbance = Absorbance - buffer_blank_abs()) # Subtract buffer blank
     )
-    
+
     return(dat)
   })
-  
+
   # Processing ----
   # Create model
   model <- reactive({
-    drm(Concentration ~ Absorbance,
-        data = data_long() %>%
-          filter(Type == "Standard") %>%
+    # Run 4PL if selected
+    if (input$model_to_use == "4PL") {
+      model <- drm(Concentration ~ Absorbance,
+        data = filter(data_long(), Type == "Standard") %>%
           dplyr::select(Concentration, Absorbance),
-        fct = LL.4())
+        fct = LL.4()
+      )
+    }
+    # Run 5PL if selected
+    if (input$model_to_use == "5PL") {
+      model <- drm(Concentration ~ Absorbance,
+        data = filter(data_long(), Type == "Standard") %>%
+          dplyr::select(Concentration, Absorbance),
+        fct = LL.5()
+      )
+    }
+    # Run linear model if selected
+    if (input$model_to_use == "LM") {
+      model <- lm(Concentration ~ Absorbance,
+        data = filter(data_long(), Type == "Standard") %>%
+          dplyr::select(Concentration, Absorbance)
+      )
+    }
+    return(model)
   })
-  
+
   # Run predictions
   predictions <- reactive({
-    predict(model(),
-                newdata = data_long() %>%
-                  filter(Type == "Sample") %>%
-              dplyr::select(Concentration, Absorbance),
-                interval = "confidence")
+    predict(
+      model(),
+      newdata = filter(data_long(), Type == "Sample") %>%
+        dplyr::select(Concentration, Absorbance),
+      interval = "confidence"
+    )
   })
-  
+
   # Combine with metadata to make a results table
   results <- reactive({
     cbind(
-      filter(
-        metadata_long(),
-        Type == "Sample"
-      ),
+      filter(metadata_long(), Type == "Sample"),
       predictions()
     ) %>%
       group_by(Index) %>%
