@@ -47,6 +47,5 @@ fluidPage(
   ),
   h4("Results:"),
   tableOutput("results"),
-  verbatimTextOutput("test_1"),
-  verbatimTextOutput("test_2")
+  downloadButton("download_results", "Download")
 )

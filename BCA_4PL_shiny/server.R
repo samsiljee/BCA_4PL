@@ -415,13 +415,28 @@ server <- function(input, output, session) {
       group_by(Index) %>%
       summarise(
         Sample = Name,
-        Concentration = mean(ifelse(input$model_to_use == "LM", fit, Prediction)) * Dilution) %>%
+        Concentration = mean(ifelse(input$model_to_use == "LM", fit, Prediction)) * Dilution
+      ) %>%
       group_by(Sample) %>%
       summarise(Concentration = mean(Concentration), CV = sd(Concentration) / mean(Concentration))
   })
-  
+
   # Render tables ----
   output$results <- renderTable({
     results()
   })
+
+  # Download handler ----
+  output$download_results <- downloadHandler(
+    filename = function() {
+      paste0("BCA_results_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      write.csv(
+        results(),
+        row.names = FALSE,
+        file
+      )
+    }
+  )
 } # Close server function
