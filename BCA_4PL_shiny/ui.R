@@ -19,6 +19,7 @@ fluidPage(
                                           "Rows" = "rows")))
     ),
     textAreaInput("raw", "Paste whole plate reading here:"),
+    h4("Plate plan:"),
     plotOutput("plate_plan_plot", height = "500px"),
     fluidRow(column(1, h5("Index")),
              column(2, h5("Type")),

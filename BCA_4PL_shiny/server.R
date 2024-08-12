@@ -11,8 +11,8 @@ colour_pallet <- wes_palettes$AsteroidCity3[c(2, 4, 3, 1)]
 
 server <- function(input, output, session) {
   # Display annotations to test
-  output$test_1 <- renderPrint(class(water_blank_abs()))
-  output$test_2 <- renderPrint(absorbance_long())
+  output$test_1 <- renderPrint(water_blank_abs())
+  output$test_2 <- renderPrint(data_long())
 
   # Annotations ----
 
@@ -298,13 +298,24 @@ server <- function(input, output, session) {
     if(input$water_blank != "") {
       row_names_water_blank <- filter(metadata_long(), Label == input$water_blank) %>% .$Row_name %>% unique
       col_names_water_blank <- filter(metadata_long(), Label == input$water_blank) %>% .$Col_name %>% unique
-      mean(as.numeric(absorbance()[row_names_water_blank,col_names_water_blank]))
+      mean(as.numeric(absorbance()[row_names_water_blank, col_names_water_blank]))
     } else {
       0 # If no water blank selected, return 0
     }
   })
   
-  # Reactive to reshape absorbance data
+  # Average absorbance of buffer blank
+  buffer_blank_abs <- reactive({
+    if(input$buffer_blank != "") {
+      row_names_buffer_blank <- filter(metadata_long(), Label == input$buffer_blank) %>% .$Row_name %>% unique
+      col_names_buffer_blank <- filter(metadata_long(), Label == input$buffer_blank) %>% .$Col_name %>% unique
+      mean(as.numeric(absorbance()[row_names_buffer_blank, col_names_buffer_blank])) - water_blank_abs()
+    } else {
+      0 # If no buffer blank selected, return 0
+    }
+  })
+  
+  # Reshape absorbance data to long format and subtract water blank from absorbance values
   absorbance_long <- reactive({
     dat <- data.frame()
     for(col_i in 1:12){
@@ -323,22 +334,25 @@ server <- function(input, output, session) {
   # Data ----
   # Combine absorbance with metadata
   data_long <- reactive({
-    merge(
-      mutate(metadata_long(), ref = paste(Row_name, Col_name, sep = "_")),
-      mutate(absorbance_long(), ref = paste(Row_name_abs, Col_name_abs, sep = "_")),
+    dat <- merge(
+      mutate(metadata_long(), ref = paste(Row_name, Col_name, sep = "_")), # Create consistant column to merge with
+      mutate(absorbance_long(), ref = paste(Row_name_abs, Col_name_abs, sep = "_")), # Create consistant column to merge with
       by = "ref") %>%
-      dplyr::select(Type, Absorbance, Label, Name, Concentration, Dilution) %>%
+      dplyr::select(Type, Absorbance, Label, Name, Concentration, Dilution) %>% # Remove unneeded columns
       mutate(Absorbance = as.numeric(Absorbance),
              Concentration = as.numeric(Concentration),
              Dilution = as.numeric(Dilution)) %>%
-      filter(Type != "Unused")
+      filter(Type %in% c("Standard", "Sample")) # Remove unused and blank cells
+    
+    # Remove buffer blank from samples only
+    dat <- rbind(
+      filter(dat, Type != "Sample"), # Leave other values unchanged
+      filter(dat, Type == "Sample") %>%
+        mutate(Absorbance = Absorbance - buffer_blank_abs()) # Subtract buffer blank
+    )
+    
+    return(dat)
   })
-  
-  # Subtract water blank from all readings
-  
-  
-  # Subtract buffer blank from samples
-  
   
   # Processing ----
   # Create model
