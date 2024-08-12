@@ -11,8 +11,8 @@ colour_pallet <- wes_palettes$AsteroidCity3[c(2, 4, 3, 1)]
 
 server <- function(input, output, session) {
   # Display annotations to test
-  output$test_1 <- renderPrint(water_blank_abs())
-  output$test_2 <- renderPrint(absorbance())
+  output$test_1 <- renderPrint(class(water_blank_abs()))
+  output$test_2 <- renderPrint(absorbance_long())
 
   # Annotations ----
 
@@ -296,7 +296,9 @@ server <- function(input, output, session) {
   # Average absorbance of water blank
   water_blank_abs <- reactive({
     if(input$water_blank != "") {
-      metadata_long() %>% filter(Label == input$water_blank)
+      row_names_water_blank <- filter(metadata_long(), Label == input$water_blank) %>% .$Row_name %>% unique
+      col_names_water_blank <- filter(metadata_long(), Label == input$water_blank) %>% .$Col_name %>% unique
+      mean(as.numeric(absorbance()[row_names_water_blank,col_names_water_blank]))
     } else {
       0 # If no water blank selected, return 0
     }
@@ -309,7 +311,7 @@ server <- function(input, output, session) {
       dat <- rbind(
         dat,
         data.frame(
-          "Absorbance" = absorbance()[,col_i] - water_blank_abs(),
+          "Absorbance" = as.numeric(absorbance()[,col_i]) - water_blank_abs(),
           "Col_name_abs" = col_i,
           "Row_name_abs" = LETTERS[1:8]
         )
