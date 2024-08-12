@@ -10,10 +10,6 @@ library(drc) # For log-logistic regressions
 colour_pallet <- wes_palettes$AsteroidCity3[c(2, 4, 3, 1)]
 
 server <- function(input, output, session) {
-  # Display annotations to test
-  output$test_1 <- renderPrint(results())
-  output$test_2 <- renderPrint(predictions())
-
   # Annotations ----
 
   # Create a data frame with individual coordinates
@@ -408,28 +404,39 @@ server <- function(input, output, session) {
 
   # Combine with metadata to make a results table
   results <- reactive({
-    cbind(
-      filter(metadata_long(), Type == "Sample"),
-      predictions()
-    ) %>%
+    dat <- if (input$model_to_use == "LM") {
+      cbind(
+        filter(metadata_long(), Type == "Sample"),
+        predictions()
+      ) %>%
+        dplyr::select(Index, Name, fit, Dilution) %>%
+        rename(Prediction = fit)
+    } else {
+      cbind(
+        filter(metadata_long(), Type == "Sample"),
+        predictions()
+      ) %>%
+        dplyr::select(Index, Name, Prediction, Dilution)
+    }
+    dat %>%
       group_by(Index) %>%
       summarise(
         Sample = Name,
-        Concentration = mean(ifelse(input$model_to_use == "LM", fit, Prediction)) * Dilution
+        `Corrected concentration` = mean(Prediction) * Dilution,
+        CV = paste0(round(sd(Prediction) / mean(Prediction) * 100), "%")
       ) %>%
-      group_by(Sample) %>%
-      summarise(Concentration = mean(Concentration), CV = sd(Concentration) / mean(Concentration))
+      unique()
   })
 
   # Render tables ----
   output$results <- renderTable({
-    results()
+    dplyr::select(results(), -Index)
   })
 
   # Download handler ----
   output$download_results <- downloadHandler(
     filename = function() {
-      paste0("BCA_results_", Sys.Date(), ".csv")
+      paste0("BCA results ", Sys.Date(), ".csv")
     },
     content = function(file) {
       write.csv(
