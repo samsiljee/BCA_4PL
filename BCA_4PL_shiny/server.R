@@ -419,4 +419,9 @@ server <- function(input, output, session) {
       group_by(Sample) %>%
       summarise(Concentration = mean(Concentration), CV = sd(Concentration) / mean(Concentration))
   })
+  
+  # Render tables ----
+  output$results <- renderTable({
+    results()
+  })
 } # Close server function
