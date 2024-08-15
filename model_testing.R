@@ -50,7 +50,10 @@ ggplot(aes(x = Absorbance, y = Concentration)) +
     aes(x = Absorbance, y = Concentration),
     col = 'red') +
   geom_point(
-    data = filter(data, Type == "Sample"),
+    data = data.frame(
+      Absorbance = filter(data, Type == "Sample")$Absorbance,
+      Concentration = as.data.frame(predictions)$Prediction
+      ),
     aes(x = Absorbance, y = Concentration),
     col = 'blue') +
   theme_bw()
